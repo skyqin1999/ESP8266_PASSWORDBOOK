@@ -1,0 +1,142 @@
+#include <ESP8266WiFi.h>
+#include <WiFiClient.h>
+#include <ESP8266WebServer.h>
+#include <ESP8266mDNS.h>
+#include "Flash.h"
+SYS_INFO sys_info_default = {1,"PasswordBook", "password", "password"};
+PWD_INFO pwd_info_default ={"BiliBili","SkyQin","qwertyuio","13000000000","绑定了微信","这是我的哔哩哔哩大号"};
+SYS_INFO sys_info;
+PWD_INFO pwd_info;
+const char* ssid     = "test";
+const char* password = "987654321";
+const int led = LED_BUILTIN;
+ESP8266WebServer server(80);
+
+const char* www_username = "admin";
+const char* www_password = "esp8266";
+const char* www_realm = "Custom Auth Realm";
+String authFailResponse = "Authentication Failed";
+
+const String html_head = "<!DOCTYPE ><html ><head><title>密码库</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" /><meta name=\"viewport\" content=\"width=device-width, minimum-scale=1.0, maximum-scale=1.0\"><style>#myInput {background-image: url(\"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABUAAAAVCAYAAACpF6WWAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAAEnQAABJ0Ad5mH3gAAAACYktHRAD/h4/MvwAAAAl2cEFnAAABKgAAASkAUBZlMQAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAxMy0wNC0xMFQwNjo1OTowNy0wNzowMI5BiVEAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMTMtMDQtMTBUMDY6NTk6MDctMDc6MDD/HDHtAAAAGXRFWHRTb2Z0d2FyZQB3d3cuaW5rc2NhcGUub3Jnm+48GgAAABF0RVh0VGl0bGUAc2VhcmNoLWljb27Cg+x9AAACKklEQVQ4T6WUSavqQBCFK+2sII7gShFXLpUsBBHFf+1KcAQFwaWiolsnnBDn++4p0iHRqPDuByFJd/Wp6qrqVn5+IQP3+52m0ymtVis6Ho885na7KRgMUiKR4O9vmEQHgwGNx2NyOp0khCBFUXgcJo/Hg67XK8ViMcpkMjz+Dl200+nQZrMhh8PBE4gYQgDidrudvzEOm2KxyP9WsCginM1mHKEUS6VSFA6HOWI4G41GPAfx2+1GgUCAVFXVZMwovwY/lUqFPB4PiyFn+XxemzbT6/VovV6z8Ol0olwux+LPCBQFEQKIvhME2WyWbWGHFCD/VghUGVvE1rDlb6TTabbFmuVyqY2aEWgbFALeI5GINvyeUCjEtlgju+IZoRWfkS30CURoxFJUNjMEt9stf38CNjJKIFvNiMBJgTebzcZt843hcMhCELWqPBDxeJwulwtvC/3X7/e1qVfgFD0rC5tMJrUZM8Lr9VI0GmVBRDCfz6nZbHI/Sna7HXW7XZpMJtxSiBIP1lmhH9NqtaqfGKQDTmQREBnSgwfmMqfYYblc1o+2xHShtNttLgSiee4EmMEp3hDBPJzikimVSuRyuTTLJ1GwWCz4pCB3UhiL/X4/Hw50C5zjLSM+n898weCogxdRIzAGxigAdtNqtV6EC4UC+Xy+z6Kf2O/31Gg0TMK4ZBDxf4uCw+FA9XpdF0aaUOg/iQLcHbVaTb/p0Cl/FgXIJ/oYnaCqKv0DC6dltH6Ks84AAAAASUVORK5CYII=\");background-position: 10px 12px;background-repeat: no-repeat;width: 100%;font-size: 16px;padding: 12px 20px 12px 40px;border: 1px solid #ddd;margin-bottom: 12px; }h2 {text-align: center;}table {table-layout: fixed;word-wrap:break-word;border-collapse: collapse; width: 100%; border: 1px solid #ddd;font-size: 18px; }th, td {text-align: left;padding: 12px;}tr {border-bottom: 1px solid #ddd; }tr.header, tr:hover {background-color: #f1f1f1;}.section {margin: 7px auto;box-shadow: 0 2px 3px rgba( 0, 0, 0, .4 );overflow: hidden;-webkit-transition: .35s;transition: .35s;}button.accordion {background: #00C37E;color: #228;cursor: pointer;padding: 18px;width: 100%;border: none;text-align: left;outline: none;font-size: 15px;transition: 0.4s;}button.accordion.active, button.accordion:hover {background-color: #f19790;}button.accordion:after {content: \"\\002B\";color: #777;font-weight: bold;float: right;margin-left: 5px;}\
+button.accordion.active:after {content: \"\\2212\";}div.panel {padding: 2 6px;background-color: rgba(182, 216, 209, 0.74);max-height: 4px;overflow: hidden;transition: max-height 0.2s ease-out;}\
+</style><script type=\"text/javascript\">function fold() {var acc = document.getElementsByClassName(\"accordion\");var i;for (i = 0; i < acc.length; i++) {acc[i].onclick = function() {this.classList.toggle(\"active\");var panel = this.nextElementSibling;\
+if (panel.style.maxHeight){panel.style.maxHeight = null;} else {panel.style.maxHeight = panel.scrollHeight + \"px\";} }}}</script><script type=\"text/javascript\">function search() {\
+var input, filter, table, tr, td, i;input = document.getElementById(\"myInput\");filter = input.value.toUpperCase();table = document.getElementById(\"myTable\");tr = table.getElementsByTagName(\"div\");\
+for (i = 0; i < tr.length; i++) {td = tr[i].getElementsByTagName(\"button\")[0];if (td) {if (td.innerHTML.toUpperCase().indexOf(filter) > -1) {tr[i].style.display = \"\";} else {tr[i].style.display = \"none\";}} }}\
+</script><body onload=\"fold()\"><h2>密码本</h2><input type=\"text\" id=\"myInput\" onkeyup=\"search()\" placeholder=\"搜索站点...\"><div id=\"myTable\">";
+
+const String html_section_1 = "<div class = \"section\"><button class=\"accordion\">";
+const String html_section_2 = "</button><div class=\"panel\"><table border = \"1\"><tr ><th width=\"30%\" bgcolor=\"#ccccd6\">站点</th><th width=\"70%\" bgcolor=\"#c3d7df\">";
+const String html_section_3 = "</th></tr><tr><td bgcolor=\"#ccccd6\">用户</td><td bgcolor=\"#c3d7df\">";
+const String html_section_4 = "</td></tr><tr><td bgcolor=\"#ccccd6\">密码</td><td bgcolor=\"#c3d7df\">";
+const String html_section_5 = "</td></tr><tr><td bgcolor=\"#ccccd6\">手机</td><td bgcolor=\"#c3d7df\">";
+const String html_section_6 = "</td></tr><tr><td bgcolor=\"#ccccd6\">关联</td><td bgcolor=\"#c3d7df\">";
+const String html_section_7 = "</td></tr><tr><td bgcolor=\"#ccccd6\">备注</td><td bgcolor=\"#c3d7df\">";  
+const String html_section_8 = "</td></tr></table></div></div>";
+
+const String html_tail = "</div></body></html>";
+
+void load_sys_info(){
+  load_sys(sys_info);
+  if(sys_info.pwd_num == 0 && sys_info.wifi_ssid[0] == 0 && sys_info.wifi_pwd[0] == 0 && sys_info.admin_pwd[0] == 0){
+    save_sys(sys_info_default);
+    save_pwd(0, pwd_info_default);
+    
+  }
+  load_sys(sys_info);
+  load_pwd(0, pwd_info);
+
+}
+
+void handleRoot() {
+    if (!server.authenticate(www_username, www_password))
+      //Basic Auth Method with Custom realm and Failure Response
+      //return server.requestAuthentication(BASIC_AUTH, www_realm, authFailResponse);
+      //Digest Auth Method with realm="Login Required" and empty Failure Response
+      //return server.requestAuthentication(DIGEST_AUTH);
+      //Digest Auth Method with Custom realm and empty Failure Response
+      //return server.requestAuthentication(DIGEST_AUTH, www_realm);
+      //Digest Auth Method with Custom realm and Failure Response
+    {
+      return server.requestAuthentication(DIGEST_AUTH, www_realm, authFailResponse);
+    }
+  
+    digitalWrite(led, 0);
+    String html = html_head + html_section_1 + "Bilibili" + html_section_2 + "Bilibili" + html_section_3 + "SkyQin" + html_section_4 + "password" + html_section_5 + "13077245033" + html_section_6 + "关联微信" + html_section_7 + "这是我的大号,aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" + html_section_8+ html_tail;
+    server.send(200, "text/html", html);
+    digitalWrite(led, 1);
+
+}
+
+void handleAdd() {
+  digitalWrite(led, 1);
+  server.send(200, "text/html", "add");
+  digitalWrite(led, 0);
+}
+
+
+
+void handleAfterAdd() {
+  digitalWrite(led, 1);
+  server.send(200, "text/html", "add");
+  digitalWrite(led, 0);
+}
+
+void handleNotFound() {
+  digitalWrite(led, 1);
+  String message = "File Not Found\n\n";
+  message += "URI: ";
+  message += server.uri();
+  message += "\nMethod: ";
+  message += (server.method() == HTTP_GET) ? "GET" : "POST";
+  message += "\nArguments: ";
+  message += server.args();
+  message += "\n";
+  for (uint8_t i = 0; i < server.args(); i++) {
+    message += " " + server.argName(i) + ": " + server.arg(i) + "\n";
+  }
+  server.send(404, "text/plain", message);
+  digitalWrite(led, 0);
+}
+
+void setup(void) {
+  
+  Serial.begin(115200);
+  Serial.print("Setting soft-AP ... ");
+  
+  IPAddress softLocal(192,168,128,1);   
+  IPAddress softGateway(192,168,128,1);
+  IPAddress softSubnet(255,255,255,0);
+  
+  WiFi.softAPConfig(softLocal, softGateway, softSubnet);  
+ 
+  WiFi.softAP(ssid, password);
+  
+  IPAddress myIP = WiFi.softAPIP();
+  Serial.print("AP IP address: ");
+  Serial.println(myIP);
+  
+  pinMode(led, OUTPUT);
+  digitalWrite(led, 0);
+  
+  
+
+  if (MDNS.begin("esp8266")) {
+    Serial.println("MDNS responder started");
+  }
+
+  server.on("/", handleRoot);
+
+  server.on("/add/", handleAdd);
+
+  server.on("/after-add/", handleAfterAdd);
+  
+  server.onNotFound(handleNotFound);
+
+  server.begin();
+  Serial.println("HTTP server started");
+}
+
+void loop(void) {
+  server.handleClient();
+}
